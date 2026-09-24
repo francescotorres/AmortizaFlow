@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#006C4C" />
+      <stop offset="100%" stop-color="#043927" />
+    </linearGradient>
+    <linearGradient id="curveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#34D399" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+  
+  <!-- Rounded Background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)" />
+  
+  <!-- Subtle Grid Lines -->
+  <path d="M 80,180 L 432,180 M 80,260 L 432,260 M 80,340 L 432,340" stroke="rgba(255,255,255,0.08)" stroke-width="2" stroke-dasharray="6,6" />
+  
+  <!-- Financial Curve (Amortization Downward Curve) -->
+  <path d="M 100,160 C 220,180 300,320 412,380" fill="none" stroke="url(#curveGrad)" stroke-width="28" stroke-linecap="round" filter="url(#shadow)" />
+  
+  <!-- Accent Arrow/Spark Point -->
+  <circle cx="100" cy="160" r="18" fill="#FBBF24" filter="url(#shadow)" />
+  <circle cx="412" cy="380" r="22" fill="#34D399" filter="url(#shadow)" />
+  <circle cx="412" cy="380" r="10" fill="#FFFFFF" />
+
+  <!-- Shield / Checkmark Motif -->
+  <path d="M 230,390 L 265,425 L 340,350" fill="none" stroke="#FBBF24" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)" />
+</svg>

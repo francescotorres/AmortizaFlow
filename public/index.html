@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#006C4C">
+    <meta name="description" content="AmortizaFlow - Controle Inteligente de Financiamento, Amortização e Economia de Juros">
+    <title>AmortizaFlow | Gestão de Financiamento & Amortização</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Material Symbols Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23006C4C'/><path d='M25,65 Q50,60 75,30' stroke='%2334D399' stroke-width='8' fill='none' stroke-linecap='round'/><circle cx='75' cy='30' r='6' fill='%23FBBF24'/></svg>">
+
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="app" class="app-container">
+        <!-- Top App Bar -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <span class="material-symbols-rounded">trending_down</span>
+                    </div>
+                    <div class="brand-info">
+                        <h1>AmortizaFlow</h1>
+                        <span class="brand-tag">Controle de Financiamento</span>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <span class="status-pill online">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Render Cloud</span>
+                    </span>
+                    <button id="btn-theme-toggle" class="icon-btn" title="Alternar tema claro/escuro" aria-label="Alternar tema">
+                        <span class="material-symbols-rounded">dark_mode</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Top Navigation Tabs (Desktop & Tablet) -->
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="dashboard">
+                    <span class="material-symbols-rounded">dashboard</span>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-tab" data-tab="installments">
+                    <span class="material-symbols-rounded">format_list_numbered</span>
+                    <span>Parcelas (60)</span>
+                </button>
+                <button class="nav-tab" data-tab="simulator">
+                    <span class="material-symbols-rounded">calculate</span>
+                    <span>Simulador</span>
+                </button>
+                <button class="nav-tab" data-tab="reports">
+                    <span class="material-symbols-rounded">assessment</span>
+                    <span>Relatórios</span>
+                </button>
+            </nav>
+        </header>
+
+        <!-- Main Views Container -->
+        <main class="main-content">
+            <!-- 1. DASHBOARD VIEW -->
+            <section id="view-dashboard" class="view-section active">
+                <!-- Next Due Banner -->
+                <div id="next-due-banner" class="next-due-banner">
+                    <div class="banner-info">
+                        <div class="banner-badge">
+                            <span class="material-symbols-rounded">calendar_month</span>
+                            <span id="next-due-label">Próxima Parcela</span>
+                        </div>
+                        <h2 id="next-due-value">R$ 985,38</h2>
+                        <p id="next-due-date">Vencimento em 14/10/2026</p>
+                    </div>
+                    <button id="btn-pay-next" class="btn btn-light">
+                        <span class="material-symbols-rounded">check</span>
+                        <span>Pagar Parcela</span>
+                    </button>
+                </div>
+
+                <!-- 4 KPI Cards Grid -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon-wrap emerald">
+                                <span class="material-symbols-rounded">account_balance</span>
+                            </div>
+                            <span id="kpi-balance-badge" class="badge">52 a pagar</span>
+                        </div>
+                        <span class="kpi-label">Saldo Devedor Restante</span>
+                        <h3 id="kpi-remaining-balance">R$ 52.980,85</h3>
+                        <span id="kpi-amortized-paid" class="kpi-sub">Amortizado: R$ 36.249,64</span>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon-wrap green">
+                                <span class="material-symbols-rounded">check_circle</span>
+                            </div>
+                            <span id="kpi-paid-badge" class="badge green">8 quitadas</span>
+                        </div>
+                        <span class="kpi-label">Total Já Pago</span>
+                        <h3 id="kpi-total-paid">R$ 6.141,95</h3>
+                        <span id="kpi-paid-sub" class="kpi-sub">8 de 60 parcelas quitadas</span>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon-wrap gold">
+                                <span class="material-symbols-rounded">savings</span>
+                            </div>
+                            <span class="badge gold">+Economia</span>
+                        </div>
+                        <span class="kpi-label">Juros Totais Poupados</span>
+                        <h3 id="kpi-saved-interest">R$ 1.741,09</h3>
+                        <span class="kpi-sub">Graças às amortizações antecipadas</span>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon-wrap blue">
+                                <span class="material-symbols-rounded">fast_forward</span>
+                            </div>
+                            <span id="kpi-advanced-badge" class="badge blue">-3 Meses</span>
+                        </div>
+                        <span class="kpi-label">Prazo Adiantado</span>
+                        <h3 id="kpi-months-advanced">3 Meses</h3>
+                        <span class="kpi-sub">Parcelas 58, 59 e 60 quitadas</span>
+                    </div>
+                </div>
+
+                <!-- Charts Section (Donut + Debt Curve) -->
+                <div class="charts-grid">
+                    <!-- Donut Card -->
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h4>Status das 60 Parcelas</h4>
+                            <span class="sub-header">Progresso de Quitação</span>
+                        </div>
+                        <div class="donut-wrapper">
+                            <div class="donut-container">
+                                <canvas id="chart-donut" width="160" height="160"></canvas>
+                                <div class="donut-center-text">
+                                    <span id="donut-percentage">13%</span>
+                                    <span class="donut-sub">Quitado</span>
+                                </div>
+                            </div>
+                            <div class="donut-legend">
+                                <div class="legend-item">
+                                    <span class="dot green"></span>
+                                    <span class="legend-text">Regulares Pagas</span>
+                                    <strong id="legend-regular-count">5</strong>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="dot blue"></span>
+                                    <span class="legend-text">Amortizadas (Fim)</span>
+                                    <strong id="legend-anticipated-count">3</strong>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="dot gray"></span>
+                                    <span class="legend-text">Pendentes</span>
+                                    <strong id="legend-pending-count">52</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Line/Area Curve Card -->
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <div>
+                                <h4>Curva de Amortização</h4>
+                                <span class="sub-header">Evolução do Saldo Devedor até 2031</span>
+                            </div>
+                            <span class="chip-info">60 Meses</span>
+                        </div>
+                        <div class="curve-container">
+                            <canvas id="chart-curve" width="600" height="200"></canvas>
+                        </div>
+                        <div class="curve-axis-labels">
+                            <span>Mai/2026 (R$ 59.122)</span>
+                            <span id="curve-current-balance-label" class="current-label">Atual: R$ 52.980</span>
+                            <span>Abr/2031 (R$ 0)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Quick Actions -->
+                <div class="quick-actions">
+                    <button class="btn btn-primary" onclick="window.navigateToTab('simulator')">
+                        <span class="material-symbols-rounded">calculate</span>
+                        <span>Simular Amortização com Desconto</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.navigateToTab('installments')">
+                        <span class="material-symbols-rounded">list</span>
+                        <span>Ver Tabela Completa (60)</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 2. INSTALLMENTS VIEW (CRONOGRAMA) -->
+            <section id="view-installments" class="view-section">
+                <div class="view-header">
+                    <div>
+                        <h2>Cronograma de Parcelas</h2>
+                        <p class="subtitle">60 parcelas • R$ 985,38 fixas nominais contratadas</p>
+                    </div>
+                    <div class="filters-row">
+                        <button class="filter-chip active" data-filter="ALL">Todas (<span id="count-all">60</span>)</button>
+                        <button class="filter-chip" data-filter="PAID">Pagas (<span id="count-paid">8</span>)</button>
+                        <button class="filter-chip" data-filter="PENDING">Pendentes (<span id="count-pending">52</span>)</button>
+                        <button class="filter-chip" data-filter="ANTICIPATED">Amortizadas (<span id="count-anticipated">3</span>)</button>
+                    </div>
+                </div>
+
+                <!-- Installments Table / Cards List -->
+                <div id="installments-list" class="installments-list">
+                    <!-- Populated dynamically by app.js -->
+                </div>
+            </section>
+
+            <!-- 3. SIMULATOR VIEW -->
+            <section id="view-simulator" class="view-section">
+                <div class="view-header">
+                    <h2>Simulador de Amortização Extraordinária</h2>
+                    <p class="subtitle">Descubra quanto poupará eliminando parcelas do fim ou reduzindo a prestação</p>
+                </div>
+
+                <!-- Simulation Mode Switcher -->
+                <div class="sim-mode-switcher">
+                    <button id="sim-mode-term" class="sim-mode-btn active" data-mode="REDUCE_TERM">
+                        <span class="material-symbols-rounded">fast_forward</span>
+                        <span>Reduzir Prazo (De trás pra frente)</span>
+                    </button>
+                    <button id="sim-mode-payment" class="sim-mode-btn" data-mode="REDUCE_PAYMENT">
+                        <span class="material-symbols-rounded">trending_down</span>
+                        <span>Reduzir Valor da Parcela</span>
+                    </button>
+                </div>
+
+                <!-- Simulation Input Box -->
+                <div class="sim-input-card">
+                    <label for="sim-input-amount">Quanto você tem disponível para amortizar hoje?</label>
+                    <div class="currency-input-wrap">
+                        <span class="currency-symbol">R$</span>
+                        <input type="number" id="sim-input-amount" value="1000" min="10" step="50" placeholder="1000">
+                    </div>
+
+                    <div class="quick-chips">
+                        <span class="quick-chips-label">Atalhos rápidos:</span>
+                        <button class="chip-val" data-val="500">R$ 500</button>
+                        <button class="chip-val active" data-val="1000">R$ 1.000</button>
+                        <button class="chip-val" data-val="2000">R$ 2.000</button>
+                        <button class="chip-val" data-val="3000">R$ 3.000</button>
+                        <button class="chip-val" data-val="5000">R$ 5.000</button>
+                    </div>
+                </div>
+
+                <!-- Simulation Result Card -->
+                <div id="sim-result-card" class="sim-result-card">
+                    <div class="result-header">
+                        <div class="result-title">
+                            <span class="material-symbols-rounded">check_circle</span>
+                            <h3>Resultado da Simulação</h3>
+                        </div>
+                        <span id="sim-badge" class="badge emerald">Alta Economia</span>
+                    </div>
+
+                    <div class="result-metrics">
+                        <div class="res-item" id="res-term-group">
+                            <span class="res-label">Parcelas Eliminadas Imediatamente</span>
+                            <h4 id="sim-res-eliminated">2 parcelas (#56, #57)</h4>
+                        </div>
+
+                        <div class="res-item highlight">
+                            <span class="res-label">Juros Futuros Poupados (Economia)</span>
+                            <h4 id="sim-res-saved">R$ 970,76</h4>
+                        </div>
+
+                        <div class="res-item">
+                            <span class="res-label">Nova Data Projetada de Quitação</span>
+                            <h4 id="sim-res-date">14/12/2030</h4>
+                        </div>
+
+                        <div class="res-item" id="res-payment-group" style="display: none;">
+                            <span class="res-label">Nova Parcela Mensal Estimada</span>
+                            <h4 id="sim-res-new-payment">R$ 966,15</h4>
+                        </div>
+                    </div>
+
+                    <div class="result-explainer">
+                        <span class="material-symbols-rounded">lightbulb</span>
+                        <p id="sim-explainer-text">Ao amortizar as parcelas finais de trás para frente, você remove integralmente os juros embutidos pelo banco, pagando apenas a cota do principal!</p>
+                    </div>
+
+                    <button id="btn-apply-sim" class="btn btn-primary btn-block">
+                        <span class="material-symbols-rounded">done_all</span>
+                        <span>Efetivar Amortização no Financiamento</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 4. REPORTS VIEW (RELATÓRIOS MENSAIS) -->
+            <section id="view-reports" class="view-section">
+                <div class="view-header">
+                    <div>
+                        <h2>Relatório Mensal Analítico</h2>
+                        <p class="subtitle">Demonstrativo completo de evolução do saldo devedor e juros acumulados</p>
+                    </div>
+                    <div class="report-actions">
+                        <a href="/api/export/csv" class="btn btn-secondary">
+                            <span class="material-symbols-rounded">download</span>
+                            <span>Baixar CSV</span>
+                        </a>
+                        <button id="btn-share-report" class="btn btn-primary">
+                            <span class="material-symbols-rounded">share</span>
+                            <span>Compartilhar</span>
+                        </button>
+                        <button id="btn-reset-data" class="btn btn-danger-outline" title="Restaurar dados originais da planilha">
+                            <span class="material-symbols-rounded">restart_alt</span>
+                            <span>Restaurar Base</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Monthly Statements Table -->
+                <div class="table-container">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Parcela</th>
+                                <th>Mês/Ano</th>
+                                <th>Status</th>
+                                <th>Saldo Inicial</th>
+                                <th>Amortização</th>
+                                <th>Juros Mês</th>
+                                <th>Valor Pago</th>
+                                <th>Economia</th>
+                                <th>Saldo Final</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation Bar (Mobile) -->
+        <nav class="mobile-nav">
+            <button class="mobile-nav-item active" data-tab="dashboard">
+                <span class="material-symbols-rounded">dashboard</span>
+                <span>Dashboard</span>
+            </button>
+            <button class="mobile-nav-item" data-tab="installments">
+                <span class="material-symbols-rounded">format_list_numbered</span>
+                <span>Parcelas</span>
+            </button>
+            <button class="mobile-nav-item" data-tab="simulator">
+                <span class="material-symbols-rounded">calculate</span>
+                <span>Simulador</span>
+            </button>
+            <button class="mobile-nav-item" data-tab="reports">
+                <span class="material-symbols-rounded">assessment</span>
+                <span>Relatórios</span>
+            </button>
+        </nav>
+
+        <!-- Edit Installment Modal Dialog -->
+        <dialog id="edit-dialog" class="modern-dialog">
+            <form method="dialog" id="form-edit-installment">
+                <div class="dialog-header">
+                    <h3 id="dialog-title">Editar Parcela #1</h3>
+                    <button type="button" class="btn-close" onclick="document.getElementById('edit-dialog').close()">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div class="dialog-body">
+                    <input type="hidden" id="edit-parcel-number">
+                    
+                    <div class="form-group">
+                        <label for="edit-due-date">Data de Vencimento</label>
+                        <input type="text" id="edit-due-date" readonly class="input-readonly">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-paid-amount">Valor Efetivamente Pago (R$)</label>
+                        <input type="number" id="edit-paid-amount" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-payment-date">Data do Pagamento (DD/MM/AAAA)</label>
+                        <input type="text" id="edit-payment-date" placeholder="DD/MM/AAAA">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-notes">Anotações / Banco</label>
+                        <input type="text" id="edit-notes" placeholder="Ex: Amortização via App Caixa">
+                    </div>
+                </div>
+                <div class="dialog-footer">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('edit-dialog').close()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </dialog>
+
+        <!-- Toast Notification Container -->
+        <div id="toast-container" class="toast-container" aria-live="polite"></div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

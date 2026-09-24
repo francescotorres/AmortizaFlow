@@ -1,0 +1,28 @@
+{
+  "name": "amortizaflow-web",
+  "version": "1.0.0",
+  "description": "AmortizaFlow - Controle Inteligente de Financiamento e Amortização de Parcelas para Render.com",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "financiamento",
+    "amortizacao",
+    "tabela-price",
+    "sac",
+    "calculadora",
+    "dashboard",
+    "render"
+  ],
+  "author": "AmortizaFlow",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

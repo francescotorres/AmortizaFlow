@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AmortizaFlow</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_installments">Parcelas</string>
+    <string name="nav_simulator">Simulador</string>
+    <string name="nav_reports">Relatórios</string>
+</resources>
