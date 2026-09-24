@@ -16,15 +16,9 @@ Este guia orienta o deploy completo da versão Web do **AmortizaFlow** no **[Ren
 O repositório já inclui o arquivo [`render.yaml`](file:///C:/Users/Esc.%20Jo%C3%A3o%20Bosco/antigravity/AmortizaFlow/render.yaml), que define automaticamente toda a infraestrutura no Render.
 
 ### Passo a Passo:
-1. Envie o código do projeto para o seu repositório no GitHub:
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: Versao Web AmortizaFlow pronta para Render.com"
-   git branch -M main
-   git remote add origin https://github.com/SEU_USUARIO/AmortizaFlow.git
-   git push -u origin main
-   ```
+1. O repositório já está criado e sincronizado no seu GitHub:
+   👉 **`https://github.com/francescotorres/AmortizaFlow`**
+
 2. Acesse seu painel no [Render Dashboard](https://dashboard.render.com).
 3. Clique no botão **"New +"** no canto superior direito e selecione **"Blueprint"**.
 4. Conecte sua conta do GitHub e selecione o repositório **`AmortizaFlow`**.
