@@ -245,8 +245,44 @@
                 <div class="view-header">
                     <div>
                         <h2>Cronograma de Parcelas</h2>
-                        <p class="subtitle">60 parcelas • R$ 985,38 fixas nominais contratadas</p>
+                        <p class="subtitle">Financiamento C6 Auto • 60 parcelas de R$ 985,38 nominais</p>
                     </div>
+                </div>
+
+                <!-- Resumo Financeiro Consolidado das Parcelas -->
+                <div class="installments-summary-grid">
+                    <div class="inst-summary-card">
+                        <span class="inst-card-label">Valor da Prestação</span>
+                        <strong class="inst-card-value text-primary">R$ 985,38</strong>
+                        <span class="inst-card-sub">60 parcelas contratuais</span>
+                    </div>
+                    <div class="inst-summary-card">
+                        <span class="inst-card-label">Total Já Quitado</span>
+                        <strong id="inst-summary-paid" class="inst-card-value text-green">R$ 7.700,68</strong>
+                        <span id="inst-summary-paid-count" class="inst-card-sub">8 parcelas pagas</span>
+                    </div>
+                    <div class="inst-summary-card">
+                        <span class="inst-card-label">Saldo Devedor Restante</span>
+                        <strong id="inst-summary-remaining" class="inst-card-value">R$ 51.422,12</strong>
+                        <span id="inst-summary-rem-count" class="inst-card-sub">52 parcelas a vencer</span>
+                    </div>
+                    <div class="inst-summary-card">
+                        <span class="inst-card-label">Economia de Juros</span>
+                        <strong id="inst-summary-saved" class="inst-card-value text-gold">+R$ 1.741,09</strong>
+                        <span class="inst-card-sub">Via amortizações antecipadas</span>
+                    </div>
+                </div>
+
+                <!-- Barra de Ferramentas: Busca + Filtros -->
+                <div class="installments-toolbar">
+                    <div class="search-input-wrap">
+                        <span class="material-symbols-rounded search-icon">search</span>
+                        <input type="text" id="installments-search" placeholder="Buscar por número (#10), data ou observação..." autocomplete="off">
+                        <button id="btn-clear-search" class="icon-btn-clear" style="display:none;" title="Limpar busca">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+
                     <div class="filters-row">
                         <button class="filter-chip active" data-filter="ALL">Todas (<span id="count-all">60</span>)</button>
                         <button class="filter-chip" data-filter="PAID">Pagas (<span id="count-paid">8</span>)</button>
@@ -257,7 +293,10 @@
 
                 <!-- Installments Table / Cards List -->
                 <div id="installments-list" class="installments-list">
-                    <!-- Populated dynamically by app.js -->
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Carregando cronograma das 60 parcelas...</p>
+                    </div>
                 </div>
             </section>
 

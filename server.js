@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const db = require('./db/turso');
 
 const app = express();
@@ -22,9 +23,24 @@ let dbMode = 'initializing';
         dbMode = result?.mode || db.getDatabaseMode();
         console.log(`✅ [Database] Banco de dados operacional no modo: ${dbMode}`);
     } catch (err) {
-        console.error('❌ [Database] Falha crítica ao inicializar o banco de dados:', err);
+        console.error('⚠️ [Database] Inicialização com erro, modo offline ativado:', err.message);
+        isDbReady = true;
+        dbMode = 'json-fallback';
     }
 })();
+
+// Helper to get fallback data from data/financing_data.json
+function getLocalFallbackData() {
+    try {
+        const dataPath = path.join(__dirname, 'data', 'financing_data.json');
+        if (fs.existsSync(dataPath)) {
+            return JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+        }
+    } catch (err) {
+        console.error('Erro ao ler financing_data.json:', err);
+    }
+    return null;
+}
 
 // Middleware to ensure DB is initialized before processing requests
 app.use(async (req, res, next) => {
@@ -34,7 +50,9 @@ app.use(async (req, res, next) => {
             isDbReady = true;
             dbMode = result?.mode || db.getDatabaseMode();
         } catch (err) {
-            return res.status(503).json({ error: 'Banco de dados inicializando... Tente novamente em alguns segundos.' });
+            // Keep going with fallback
+            isDbReady = true;
+            dbMode = 'json-fallback';
         }
     }
     next();
@@ -60,7 +78,34 @@ app.get('/api/summary', async (req, res) => {
         const summary = await db.calculateSummary();
         res.json(summary);
     } catch (err) {
-        console.error('Erro em /api/summary:', err);
+        console.warn('Fallback ativado em /api/summary:', err.message);
+        const fb = getLocalFallbackData();
+        if (fb) {
+            const insts = fb.installments || [];
+            const paid = insts.filter(i => i.isPaid);
+            const remaining = insts.filter(i => !i.isPaid);
+            const anticipated = insts.filter(i => i.isAnticipated);
+            const totalPaid = paid.reduce((acc, i) => acc + (i.actualPaidAmount || i.nominalAmount), 0);
+            const savedInterest = insts.reduce((acc, i) => acc + (i.savedInterest || 0), 0);
+            const remainingBalance = remaining.length * 985.38;
+
+            return res.json({
+                totalContractAmount: 59122.80,
+                totalInstallments: 60,
+                nominalInstallment: 985.38,
+                monthlyInterestRate: 0.0165,
+                paidInstallmentsCount: paid.length,
+                remainingInstallmentsCount: remaining.length,
+                anticipatedInstallmentsCount: anticipated.length,
+                totalPaidAmount: parseFloat(totalPaid.toFixed(2)),
+                remainingNominalBalance: parseFloat(remainingBalance.toFixed(2)),
+                totalSavedInterest: parseFloat(savedInterest.toFixed(2)),
+                progressPercentage: Math.round((paid.length / 60) * 100),
+                monthsAdvanced: anticipated.length,
+                nextDueInstallment: remaining[0] || null,
+                amortizedPrincipalPaid: parseFloat((paid.reduce((acc, i) => acc + i.theoreticalAmortization, 0)).toFixed(2))
+            });
+        }
         res.status(500).json({ error: 'Erro ao calcular resumo financeiro', details: err.message });
     }
 });
@@ -69,14 +114,37 @@ app.get('/api/summary', async (req, res) => {
 app.get('/api/installments', async (req, res) => {
     try {
         const statusFilter = req.query.status; // 'PAID', 'PENDING', 'ANTICIPATED' or undefined
-        const installments = await db.getInstallments(statusFilter);
+        let installments = [];
 
-        const contractRes = await db.client.execute('SELECT * FROM contracts WHERE id = "main_contract"');
-        const contractRow = contractRes.rows[0] || {};
+        try {
+            installments = await db.getInstallments(statusFilter);
+        } catch (dbErr) {
+            console.warn('[Installments] Falha no banco, usando dados locais de contingência:', dbErr.message);
+        }
+
+        // Se o banco estiver vazio ou der erro, usa dados de contingência do JSON
+        if (!installments || installments.length === 0) {
+            const fb = getLocalFallbackData();
+            if (fb) {
+                let list = fb.installments || [];
+                if (statusFilter === 'PAID') list = list.filter(i => i.isPaid);
+                else if (statusFilter === 'PENDING') list = list.filter(i => !i.isPaid);
+                else if (statusFilter === 'ANTICIPATED') list = list.filter(i => i.isAnticipated);
+                installments = list;
+            }
+        }
+
+        let contractRow = {};
+        try {
+            if (db.client) {
+                const contractRes = await db.client.execute("SELECT * FROM contracts WHERE id = 'main_contract'");
+                contractRow = contractRes.rows[0] || {};
+            }
+        } catch (_) {}
 
         res.json({
             contract: {
-                title: contractRow.title || 'Financiamento Imobiliário / Veículo',
+                title: contractRow.title || 'Financiamento Veicular C6 Auto',
                 totalInstallments: Number(contractRow.total_installments || 60),
                 nominalInstallment: Number(contractRow.nominal_installment || 985.38),
                 totalContractAmount: Number(contractRow.total_contract_amount || 59122.80),
@@ -84,11 +152,11 @@ app.get('/api/installments', async (req, res) => {
                 startDate: contractRow.start_date || '14/05/2026',
                 originalEndDate: contractRow.original_end_date || '14/04/2031'
             },
-            installments
+            installments: installments || []
         });
     } catch (err) {
         console.error('Erro em /api/installments:', err);
-        res.status(500).json({ error: 'Erro ao consultar parcelas no Turso', details: err.message });
+        res.status(500).json({ error: 'Erro ao consultar parcelas', details: err.message });
     }
 });
 
