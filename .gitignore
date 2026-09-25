@@ -24,6 +24,9 @@ yarn-error.log*
 *.apk
 *.idsig
 *.jks
+*.db
+data/*.db
+local.db
 
 .antigravity/
 
