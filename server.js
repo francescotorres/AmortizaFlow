@@ -13,13 +13,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize database schema and seeds on startup
 let isDbReady = false;
+let dbMode = 'initializing';
+
 (async () => {
     try {
-        await db.initDatabase();
+        const result = await db.initDatabase();
         isDbReady = true;
-        console.log('✅ [Turso] Conexão e sincronização com o banco de dados concluídas com sucesso.');
+        dbMode = result?.mode || db.getDatabaseMode();
+        console.log(`✅ [Database] Banco de dados operacional no modo: ${dbMode}`);
     } catch (err) {
-        console.error('❌ [Turso] Falha ao inicializar o banco de dados:', err);
+        console.error('❌ [Database] Falha crítica ao inicializar o banco de dados:', err);
     }
 })();
 
@@ -27,10 +30,11 @@ let isDbReady = false;
 app.use(async (req, res, next) => {
     if (req.path.startsWith('/api/') && !isDbReady) {
         try {
-            await db.initDatabase();
+            const result = await db.initDatabase();
             isDbReady = true;
+            dbMode = result?.mode || db.getDatabaseMode();
         } catch (err) {
-            return res.status(503).json({ error: 'Banco de dados Turso inicializando... Tente novamente em alguns segundos.' });
+            return res.status(503).json({ error: 'Banco de dados inicializando... Tente novamente em alguns segundos.' });
         }
     }
     next();
@@ -41,11 +45,11 @@ app.use(async (req, res, next) => {
 // 1. Health check
 app.get('/api/health', (req, res) => {
     res.json({
-        status: 'ok',
+        status: isDbReady ? 'ok' : 'initializing',
         app: 'AmortizaFlow Web',
-        database: 'turso-libsql',
+        databaseMode: db.getDatabaseMode ? db.getDatabaseMode() : dbMode,
         isDbReady,
-        version: '1.1.0',
+        version: '1.2.0',
         timestamp: new Date().toISOString()
     });
 });

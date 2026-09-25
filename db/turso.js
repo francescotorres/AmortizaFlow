@@ -8,17 +8,38 @@ if (process.platform === 'win32' && !process.env.NODE_TLS_REJECT_UNAUTHORIZED &&
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
-const url = process.env.TURSO_DATABASE_URL || 'file:local.db';
-const authToken = process.env.TURSO_AUTH_TOKEN || '';
+const rawUrl = process.env.TURSO_DATABASE_URL || 'file:local.db';
+const rawToken = process.env.TURSO_AUTH_TOKEN || '';
+
+// Clean up credentials (strip any accidental whitespaces or line-breaks that cause HTTP 401)
+const url = rawUrl.trim();
+const authToken = rawToken.replace(/\s+/g, '');
 
 if (!process.env.TURSO_DATABASE_URL) {
     console.warn('[Turso] Warning: TURSO_DATABASE_URL not set in environment. Falling back to local file:local.db');
 }
 
-const client = createClient({
+let isUsingLocalFallback = false;
+let client = createClient({
     url,
     authToken
 });
+
+function switchToLocalFallback(reason) {
+    isUsingLocalFallback = true;
+    console.warn(`\n⚠️  [Turso Notice] ${reason}`);
+    console.warn('🔄 [Turso Fallback] Alternando automaticamente para banco SQLite local em arquivo...');
+    console.warn('ℹ️  [Turso Info] O sistema permanecerá online e funcional. Para persistir no Turso Cloud, configure o TURSO_AUTH_TOKEN no Render.');
+    
+    const dataDir = path.join(__dirname, '..', 'data');
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
+    const localDbPath = path.join(dataDir, 'local.db');
+    client = createClient({
+        url: `file:${localDbPath}`
+    });
+}
 
 /**
  * Maps database row to standard Installment object matching API/App contracts
@@ -41,11 +62,9 @@ function mapRowToInstallment(row) {
 }
 
 /**
- * Initializes database schemas and initial seed data if not present
+ * Creates all tables and seeds official data using the current client
  */
-async function initDatabase() {
-    console.log('[Turso] Initializing database schema on:', url.replace(/\/\/.*@/, '//***@'));
-
+async function createTablesAndSeed() {
     // 1. Users Table
     await client.execute(`
         CREATE TABLE IF NOT EXISTS users (
@@ -127,14 +146,53 @@ async function initDatabase() {
     const count = Number(countRes.rows[0].count);
 
     if (count === 0) {
-        console.log('[Turso] Table installments is empty. Seeding official spreadsheet data (60 installments)...');
+        console.log('[Database] Tabela installments vazia. Inserindo dados oficiais (60 parcelas)...');
         await seedOfficialData();
     } else {
-        console.log(`[Turso] Database ready with ${count} installments active.`);
+        console.log(`[Database] Banco de dados pronto com ${count} parcelas ativas.`);
     }
 
     // Ensure default user and contract exist
     await ensureDefaults();
+}
+
+/**
+ * Initializes database schemas and initial seed data if not present.
+ * Transparently falls back to local SQLite if Turso Cloud returns 401 Unauthorized or fails.
+ */
+async function initDatabase() {
+    const targetDesc = isUsingLocalFallback ? 'SQLite Local' : url.replace(/\/\/.*@/, '//***@');
+    console.log('[Database] Inicializando banco de dados no destino:', targetDesc);
+
+    try {
+        await createTablesAndSeed();
+        console.log(`✅ [Database] Banco de dados pronto (${isUsingLocalFallback ? 'SQLite Local' : 'Turso Cloud'}).`);
+        return { mode: isUsingLocalFallback ? 'local' : 'turso-cloud' };
+    } catch (err) {
+        const errorMsg = String(err.message || err);
+        const isAuthError = err.status === 401 ||
+                            err.code === 'SERVER_ERROR' ||
+                            errorMsg.includes('401') ||
+                            String(err.cause?.status) === '401';
+
+        if (!isUsingLocalFallback && isAuthError) {
+            switchToLocalFallback('Falha de autenticação com Turso Cloud (HTTP 401 Unauthorized). Verifique o TURSO_AUTH_TOKEN.');
+            await createTablesAndSeed();
+            console.log('✅ [Database] Inicialização via fallback SQLite concluída com sucesso!');
+            return { mode: 'local' };
+        } else if (!isUsingLocalFallback) {
+            switchToLocalFallback(`Falha ao conectar no Turso Cloud: ${errorMsg}`);
+            await createTablesAndSeed();
+            console.log('✅ [Database] Inicialização via fallback SQLite concluída com sucesso!');
+            return { mode: 'local' };
+        }
+
+        throw err;
+    }
+}
+
+function getDatabaseMode() {
+    return isUsingLocalFallback ? 'local' : 'turso-cloud';
 }
 
 /**
@@ -502,7 +560,10 @@ async function resetToOfficialData() {
 }
 
 module.exports = {
-    client,
+    get client() {
+        return client;
+    },
+    getDatabaseMode,
     initDatabase,
     seedOfficialData,
     getInstallments,
