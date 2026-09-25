@@ -1,5 +1,5 @@
-// AmortizaFlow Service Worker - Fast caching & offline resilience
-const CACHE_NAME = 'amortizaflow-v1';
+// AmortizaFlow Service Worker - v3.0 (Network-First with offline resilience)
+const CACHE_NAME = 'amortizaflow-v3.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS).catch((err) => {
@@ -19,7 +20,6 @@ self.addEventListener('install', (event) => {
       });
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -28,13 +28,13 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[AmortizaFlow SW] Deleting obsolete cache:', key);
             return caches.delete(key);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -43,13 +43,15 @@ self.addEventListener('fetch', (event) => {
   // API calls: Network-first, do NOT cache mutation calls (POST, PUT, DELETE)
   if (url.pathname.startsWith('/api/')) {
     if (event.request.method !== 'GET') {
-      return; // Regular fetch
+      return; // Regular fetch for mutations
     }
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
           return response;
         })
         .catch(() => caches.match(event.request))
@@ -57,21 +59,42 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: Cache-first, fallback to network
+  // Navigation and core HTML/JS: Network-First to guarantee latest deploy on Render
+  const isNavigation = event.request.mode === 'navigate';
+  const isAppCode = url.pathname === '/' || url.pathname.endsWith('.html') || url.pathname.endsWith('.js');
+
+  if (isNavigation || isAppCode) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            if (isNavigation) return caches.match('/index.html');
+          });
+        })
+    );
+    return;
+  }
+
+  // Other static assets (images, fonts, stylesheets): Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached and update in background
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-            }
-          })
-          .catch(() => {});
-        return cachedResponse;
-      }
-      return fetch(event.request);
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return networkResponse;
+      }).catch(() => {});
+
+      return cachedResponse || fetchPromise;
     })
   );
 });

@@ -52,14 +52,14 @@
             </div>
 
             <!-- Top Navigation Tabs (Desktop & Tablet) -->
-            <nav class="nav-tabs">
+            <nav class="nav-tabs" aria-label="Navegação Principal">
                 <button class="nav-tab active" data-tab="dashboard">
                     <span class="material-symbols-rounded">dashboard</span>
                     <span>Dashboard</span>
                 </button>
                 <button class="nav-tab" data-tab="installments">
                     <span class="material-symbols-rounded">format_list_numbered</span>
-                    <span>Parcelas (60)</span>
+                    <span>Cronograma de Parcelas</span>
                 </button>
                 <button class="nav-tab" data-tab="simulator">
                     <span class="material-symbols-rounded">calculate</span>
@@ -67,7 +67,7 @@
                 </button>
                 <button class="nav-tab" data-tab="reports">
                     <span class="material-symbols-rounded">assessment</span>
-                    <span>Relatórios</span>
+                    <span>Relatório Mensal Analítico</span>
                 </button>
             </nav>
         </header>
@@ -231,11 +231,15 @@
                 <div class="quick-actions">
                     <button class="btn btn-primary" onclick="window.navigateToTab('simulator')">
                         <span class="material-symbols-rounded">calculate</span>
-                        <span>Simular Amortização com Desconto</span>
+                        <span>Simular Amortização</span>
                     </button>
                     <button class="btn btn-secondary" onclick="window.navigateToTab('installments')">
-                        <span class="material-symbols-rounded">list</span>
-                        <span>Ver Tabela Completa (60)</span>
+                        <span class="material-symbols-rounded">format_list_numbered</span>
+                        <span>Cronograma de Parcelas (60)</span>
+                    </button>
+                    <button class="btn btn-outline" onclick="window.navigateToTab('reports')">
+                        <span class="material-symbols-rounded">assessment</span>
+                        <span>Relatório Mensal Analítico</span>
                     </button>
                 </div>
             </section>
@@ -475,20 +479,20 @@
         </main>
 
         <!-- Bottom Navigation Bar (Mobile) -->
-        <nav class="mobile-nav">
-            <button class="mobile-nav-item active" data-tab="dashboard">
+        <nav class="mobile-nav" aria-label="Navegação Inferior Mobile">
+            <button class="mobile-nav-item active" data-tab="dashboard" title="Dashboard">
                 <span class="material-symbols-rounded">dashboard</span>
                 <span>Dashboard</span>
             </button>
-            <button class="mobile-nav-item" data-tab="installments">
+            <button class="mobile-nav-item" data-tab="installments" title="Cronograma de Parcelas">
                 <span class="material-symbols-rounded">format_list_numbered</span>
-                <span>Parcelas</span>
+                <span>Cronograma</span>
             </button>
-            <button class="mobile-nav-item" data-tab="simulator">
+            <button class="mobile-nav-item" data-tab="simulator" title="Simulador de Amortização">
                 <span class="material-symbols-rounded">calculate</span>
                 <span>Simulador</span>
             </button>
-            <button class="mobile-nav-item" data-tab="reports">
+            <button class="mobile-nav-item" data-tab="reports" title="Relatório Mensal Analítico">
                 <span class="material-symbols-rounded">assessment</span>
                 <span>Relatórios</span>
             </button>

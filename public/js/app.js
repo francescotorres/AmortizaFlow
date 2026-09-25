@@ -5,22 +5,6 @@
 (function () {
     'use strict';
 
-    // Application State
-    const state = {
-        summary: null,
-        installments: [],
-        reports: [],
-        currentTab: 'dashboard',
-        currentFilter: 'ALL',
-        reportFilter: 'ALL',
-        searchQuery: '',
-        reportSearchQuery: '',
-        simMode: 'REDUCE_TERM',
-        simAmount: 1000,
-        simResult: null,
-        theme: localStorage.getItem('amortizaflow_theme') || 'light'
-    };
-
     // Currency Formatter
     const currencyFormatter = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -32,75 +16,7 @@
         return currencyFormatter.format(value);
     }
 
-    // Toast Notification Utility
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <span class="material-symbols-rounded">${type === 'success' ? 'check_circle' : 'info'}</span>
-            <span>${message}</span>
-        `;
-
-        container.appendChild(toast);
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
-            toast.style.transition = 'all 0.3s ease';
-            setTimeout(() => toast.remove(), 300);
-        }, 3200);
-    }
-
-    // Theme Management
-    function applyTheme(theme) {
-        state.theme = theme;
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('amortizaflow_theme', theme);
-
-        const btn = document.getElementById('btn-theme-toggle');
-        if (btn) {
-            btn.innerHTML = `<span class="material-symbols-rounded">${theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>`;
-        }
-
-        // Redraw canvas charts with updated theme colors
-        if (state.summary && state.installments.length > 0) {
-            drawDonutChart(state.summary);
-            drawCurveChart(state.installments);
-        }
-    }
-
-    // Navigation System
-    window.navigateToTab = function (tabName) {
-        state.currentTab = tabName;
-
-        // Update nav tabs
-        document.querySelectorAll('.nav-tab, .mobile-nav-item').forEach(el => {
-            el.classList.toggle('active', el.getAttribute('data-tab') === tabName);
-        });
-
-        // Update view sections
-        document.querySelectorAll('.view-section').forEach(el => {
-            el.classList.toggle('active', el.id === `view-${tabName}`);
-        });
-
-        // Trigger specific tab renders
-        if (tabName === 'dashboard') {
-            if (state.summary && state.installments.length > 0) {
-                drawDonutChart(state.summary);
-                drawCurveChart(state.installments);
-            }
-        } else if (tabName === 'installments') {
-            renderInstallments();
-        } else if (tabName === 'simulator') {
-            runSimulation();
-        } else if (tabName === 'reports') {
-            fetchReports();
-        }
-    };
-
-    // ======================== API INTERACTIONS & DATA RESILIENCE ========================
+    // ======================== DEFAULT OFFICIAL DATA GENERATION ========================
 
     function getDefaultOfficialInstallments() {
         const list = [];
@@ -191,6 +107,130 @@
             amortizedPrincipalPaid: parseFloat((paid.reduce((acc, i) => acc + i.theoreticalAmortization, 0)).toFixed(2))
         };
     }
+
+    function generateDefaultReports(installments) {
+        let currentBalance = 59122.80;
+        return (installments || []).map(item => {
+            const initialBal = currentBalance;
+            const amortAmount = item.theoreticalAmortization > 0 ? item.theoreticalAmortization : 920.00;
+            const interestVal = item.interestAmount !== undefined ? item.interestAmount : 65.38;
+            const paymentAmount = item.isPaid ? (item.actualPaidAmount || item.nominalAmount) : item.nominalAmount;
+            const interestPaid = item.isPaid ? (item.isAnticipated ? 0 : interestVal) : interestVal;
+            currentBalance = Math.max(0, parseFloat((currentBalance - item.nominalAmount).toFixed(2)));
+
+            return {
+                parcelNumber: item.parcelNumber,
+                monthYear: item.dueDate,
+                initialBalance: initialBal,
+                nominalAmount: item.nominalAmount,
+                paymentAmount: paymentAmount,
+                amortizationAmount: amortAmount,
+                interestPaid: parseFloat(interestPaid.toFixed(2)),
+                savedInterest: item.savedInterest || 0,
+                finalBalance: currentBalance,
+                isPaid: item.isPaid,
+                isAnticipated: item.isAnticipated,
+                paymentDate: item.paymentDate,
+                notes: item.notes || ''
+            };
+        });
+    }
+
+    // Application State - Pre-hydrated with official data so views are immediately available
+    const initialInstallments = getDefaultOfficialInstallments();
+    const initialSummary = calculateClientSummary(initialInstallments);
+    const initialReports = generateDefaultReports(initialInstallments);
+
+    const state = {
+        summary: initialSummary,
+        installments: initialInstallments,
+        reports: initialReports,
+        currentTab: 'dashboard',
+        currentFilter: 'ALL',
+        reportFilter: 'ALL',
+        searchQuery: '',
+        reportSearchQuery: '',
+        simMode: 'REDUCE_TERM',
+        simAmount: 1000,
+        simResult: null,
+        theme: localStorage.getItem('amortizaflow_theme') || 'light'
+    };
+
+    // Toast Notification Utility
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <span class="material-symbols-rounded">${type === 'success' ? 'check_circle' : 'info'}</span>
+            <span>${message}</span>
+        `;
+
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3200);
+    }
+
+    // Theme Management
+    function applyTheme(theme) {
+        state.theme = theme;
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('amortizaflow_theme', theme);
+
+        const btn = document.getElementById('btn-theme-toggle');
+        if (btn) {
+            btn.innerHTML = `<span class="material-symbols-rounded">${theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>`;
+        }
+
+        // Redraw canvas charts with updated theme colors
+        if (state.summary && state.installments.length > 0) {
+            drawDonutChart(state.summary);
+            drawCurveChart(state.installments);
+        }
+    }
+
+    // Navigation System
+    window.navigateToTab = function (tabName, updateHash = true) {
+        state.currentTab = tabName;
+
+        if (updateHash && window.location.hash !== `#${tabName}`) {
+            history.replaceState(null, '', `#${tabName}`);
+        }
+
+        // Update nav tabs
+        document.querySelectorAll('.nav-tab, .mobile-nav-item').forEach(el => {
+            el.classList.toggle('active', el.getAttribute('data-tab') === tabName);
+        });
+
+        // Update view sections
+        document.querySelectorAll('.view-section').forEach(el => {
+            el.classList.toggle('active', el.id === `view-${tabName}`);
+        });
+
+        // Trigger specific tab renders
+        if (tabName === 'dashboard') {
+            if (state.summary && state.installments.length > 0) {
+                renderDashboard();
+                drawDonutChart(state.summary);
+                drawCurveChart(state.installments);
+            }
+        } else if (tabName === 'installments') {
+            renderInstallments();
+        } else if (tabName === 'simulator') {
+            runSimulation();
+        } else if (tabName === 'reports') {
+            renderReportsTable();
+            fetchReports();
+        }
+    };
+
+    // ======================== API INTERACTIONS & DATA RESILIENCE ========================
 
     async function fetchAllData() {
         try {
@@ -976,10 +1016,13 @@
         });
 
         // Theme toggle
-        document.getElementById('btn-theme-toggle').addEventListener('click', () => {
-            const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
-            applyTheme(nextTheme);
-        });
+        const btnTheme = document.getElementById('btn-theme-toggle');
+        if (btnTheme) {
+            btnTheme.addEventListener('click', () => {
+                const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
+                applyTheme(nextTheme);
+            });
+        }
 
         // Filter chips
         document.querySelectorAll('.filter-chip').forEach(chip => {
@@ -1048,35 +1091,61 @@
 
         // Simulator input
         const simInput = document.getElementById('sim-input-amount');
-        simInput.addEventListener('input', runSimulation);
+        if (simInput) {
+            simInput.addEventListener('input', runSimulation);
+        }
 
         // Simulator quick chips
         document.querySelectorAll('.chip-val').forEach(chip => {
             chip.addEventListener('click', () => {
                 document.querySelectorAll('.chip-val').forEach(c => c.classList.remove('active'));
                 chip.classList.add('active');
-                simInput.value = chip.getAttribute('data-val');
-                runSimulation();
+                if (simInput) {
+                    simInput.value = chip.getAttribute('data-val');
+                    runSimulation();
+                }
             });
         });
 
         // Apply simulation button
-        document.getElementById('btn-apply-sim').addEventListener('click', applySimulation);
+        const btnApplySim = document.getElementById('btn-apply-sim');
+        if (btnApplySim) {
+            btnApplySim.addEventListener('click', applySimulation);
+        }
 
         // Reports actions
-        document.getElementById('btn-reset-data').addEventListener('click', resetSpreadsheet);
-        document.getElementById('btn-share-report').addEventListener('click', shareReport);
+        const btnResetData = document.getElementById('btn-reset-data');
+        if (btnResetData) {
+            btnResetData.addEventListener('click', resetSpreadsheet);
+        }
+
+        const btnShareReport = document.getElementById('btn-share-report');
+        if (btnShareReport) {
+            btnShareReport.addEventListener('click', shareReport);
+        }
 
         // Modal Edit form submission
-        document.getElementById('form-edit-installment').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const number = parseInt(document.getElementById('edit-parcel-number').value, 10);
-            const paid = parseFloat(document.getElementById('edit-paid-amount').value);
-            const date = document.getElementById('edit-payment-date').value;
-            const notes = document.getElementById('edit-notes').value;
+        const formEdit = document.getElementById('form-edit-installment');
+        if (formEdit) {
+            formEdit.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const number = parseInt(document.getElementById('edit-parcel-number').value, 10);
+                const paid = parseFloat(document.getElementById('edit-paid-amount').value);
+                const date = document.getElementById('edit-payment-date').value;
+                const notes = document.getElementById('edit-notes').value;
 
-            document.getElementById('edit-dialog').close();
-            updateInstallmentDetails(number, paid, date, notes);
+                const dialog = document.getElementById('edit-dialog');
+                if (dialog) dialog.close();
+                updateInstallmentDetails(number, paid, date, notes);
+            });
+        }
+
+        // Hash change navigation
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.replace('#', '');
+            if (['dashboard', 'installments', 'simulator', 'reports'].includes(hash)) {
+                window.navigateToTab(hash, false);
+            }
         });
 
         // Resize redraw for charts
@@ -1098,6 +1167,21 @@
     document.addEventListener('DOMContentLoaded', () => {
         applyTheme(state.theme);
         bindEvents();
+
+        // Render synchronous baseline immediately so no empty states appear during cold start
+        renderDashboard();
+        renderInstallments();
+        renderReportsTable();
+
+        // Resolve initial tab by hash or default to dashboard
+        const initialHash = window.location.hash.replace('#', '');
+        if (['dashboard', 'installments', 'simulator', 'reports'].includes(initialHash)) {
+            window.navigateToTab(initialHash, false);
+        } else {
+            window.navigateToTab('dashboard', false);
+        }
+
+        // Fetch fresh server data asynchronously
         fetchAllData();
     });
 
