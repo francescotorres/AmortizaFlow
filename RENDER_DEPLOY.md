@@ -51,10 +51,19 @@ Se preferir configurar o serviço manualmente pelo painel do Render:
    | **Start Command** | `npm start` |
    | **Instance Type** | `Free` |
 
-4. Em **Advanced**:
+4. Em **Environment Variables** (ou no Blueprint prompt):
+   Adicione as seguintes variáveis:
+   | Key | Value |
+   | :--- | :--- |
+   | **`TURSO_DATABASE_URL`** | `libsql://amortiza-francescotorres.aws-us-west-2.turso.io` |
+   | **`TURSO_AUTH_TOKEN`** | `eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...` (Seu token completo do Turso) |
+   | **`NODE_ENV`** | `production` |
+   | **`PORT`** | `10000` |
+
+5. Em **Advanced**:
    - **Health Check Path**: `/api/health`
    - **Auto-Deploy**: `Yes`
-5. Clique em **"Create Web Service"**.
+6. Clique em **"Create Web Service"**.
 
 ---
 
