@@ -302,8 +302,46 @@ app.post('/api/simulate/apply', async (req, res) => {
 // 8. Monthly Reports
 app.get('/api/reports', async (req, res) => {
     try {
-        const reports = await db.getMonthlyReports();
-        res.json(reports);
+        let reports = [];
+        try {
+            reports = await db.getMonthlyReports();
+        } catch (dbErr) {
+            console.warn('[Reports] Falha no banco ao buscar relatórios, usando fallback:', dbErr.message);
+        }
+
+        if (!reports || reports.length === 0) {
+            const fb = getLocalFallbackData();
+            if (fb && Array.isArray(fb.installments)) {
+                let currentBalance = 59122.80;
+                reports = fb.installments.map((item) => {
+                    const initialBal = currentBalance;
+                    const amortAmount = item.theoreticalAmortization > 0 ? item.theoreticalAmortization : 920.00;
+                    const interestVal = item.interestAmount !== undefined ? item.interestAmount : 65.38;
+                    const paymentAmount = item.isPaid ? (item.actualPaidAmount || item.nominalAmount) : item.nominalAmount;
+                    const interestPaid = item.isPaid ? (item.isAnticipated ? 0 : interestVal) : interestVal;
+
+                    currentBalance = Math.max(0, parseFloat((currentBalance - item.nominalAmount).toFixed(2)));
+
+                    return {
+                        monthYear: item.dueDate,
+                        parcelNumber: item.parcelNumber,
+                        initialBalance: initialBal,
+                        nominalAmount: item.nominalAmount,
+                        paymentAmount: paymentAmount,
+                        amortizationAmount: amortAmount,
+                        interestPaid: parseFloat(interestPaid.toFixed(2)),
+                        savedInterest: item.savedInterest || 0,
+                        finalBalance: currentBalance,
+                        isPaid: item.isPaid,
+                        isAnticipated: item.isAnticipated,
+                        paymentDate: item.paymentDate,
+                        notes: item.notes || ''
+                    };
+                });
+            }
+        }
+
+        res.json(reports || []);
     } catch (err) {
         console.error('Erro em /api/reports:', err);
         res.status(500).json({ error: 'Erro ao gerar relatórios mensais', details: err.message });

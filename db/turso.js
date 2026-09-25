@@ -516,7 +516,7 @@ async function calculateSummary() {
 }
 
 /**
- * Generate monthly report showing balance evolution
+ * Generate monthly analytical report showing complete balance and interest evolution
  */
 async function getMonthlyReports() {
     const installments = await getInstallments();
@@ -524,29 +524,48 @@ async function getMonthlyReports() {
 
     return installments.map((item) => {
         const initialBal = currentBalance;
-        let amortAmount = 0;
-        let interestPaid = 0;
-        let paymentAmount = 0;
+
+        // Amortização teórica ou efetiva
+        const amortAmount = item.theoreticalAmortization > 0
+            ? item.theoreticalAmortization
+            : parseFloat((item.nominalAmount * 0.9).toFixed(2));
+
+        // Juros da prestação
+        let interestVal = item.interestAmount;
+        if (interestVal === undefined || interestVal === null || isNaN(interestVal)) {
+            interestVal = Math.max(0, parseFloat((item.nominalAmount - amortAmount).toFixed(2)));
+        }
+
+        let paymentAmount = item.nominalAmount;
+        let interestPaid = interestVal;
 
         if (item.isPaid) {
-            paymentAmount = item.actualPaidAmount || item.nominalAmount;
-            amortAmount = item.theoreticalAmortization;
-            interestPaid = Math.max(0, paymentAmount - amortAmount);
-            currentBalance = parseFloat((currentBalance - item.nominalAmount).toFixed(2));
+            paymentAmount = item.actualPaidAmount !== null && item.actualPaidAmount !== undefined
+                ? item.actualPaidAmount
+                : item.nominalAmount;
+            if (item.isAnticipated) {
+                // Em quitações antecipadas do final do contrato, juros futuros foram eliminados
+                interestPaid = 0;
+            }
         }
+
+        // Abatimento nominal do saldo devedor
+        currentBalance = Math.max(0, parseFloat((currentBalance - item.nominalAmount).toFixed(2)));
 
         return {
             monthYear: item.dueDate,
             parcelNumber: item.parcelNumber,
             initialBalance: initialBal,
+            nominalAmount: item.nominalAmount,
             paymentAmount: paymentAmount,
             amortizationAmount: amortAmount,
             interestPaid: parseFloat(interestPaid.toFixed(2)),
-            savedInterest: item.savedInterest,
-            finalBalance: item.isPaid ? currentBalance : initialBal,
+            savedInterest: item.savedInterest || 0,
+            finalBalance: currentBalance,
             isPaid: item.isPaid,
             isAnticipated: item.isAnticipated,
-            notes: item.notes
+            paymentDate: item.paymentDate,
+            notes: item.notes || ''
         };
     });
 }

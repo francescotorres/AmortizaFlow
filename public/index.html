@@ -386,7 +386,7 @@
                 <div class="view-header">
                     <div>
                         <h2>Relatório Mensal Analítico</h2>
-                        <p class="subtitle">Demonstrativo completo de evolução do saldo devedor e juros acumulados</p>
+                        <p class="subtitle">Demonstrativo completo de amortização, juros, saldo devedor e economia acumulada</p>
                     </div>
                     <div class="report-actions">
                         <a href="/api/export/csv" class="btn btn-secondary">
@@ -404,25 +404,71 @@
                     </div>
                 </div>
 
+                <!-- Resumo Analítico Consolidado -->
+                <div class="reports-summary-grid">
+                    <div class="rep-summary-card">
+                        <span class="rep-card-label">Total Financiado</span>
+                        <strong class="rep-card-value">R$ 59.122,80</strong>
+                        <span class="rep-card-sub">60 parcelas contratuais</span>
+                    </div>
+                    <div class="rep-summary-card">
+                        <span class="rep-card-label">Amortização Total</span>
+                        <strong id="rep-total-amort" class="rep-card-value text-primary">R$ 59.122,80</strong>
+                        <span class="rep-card-sub">Total do principal a amortizar</span>
+                    </div>
+                    <div class="rep-summary-card">
+                        <span class="rep-card-label">Juros Totais do Plano</span>
+                        <strong id="rep-total-interest" class="rep-card-value">R$ 0,00</strong>
+                        <span class="rep-card-sub">Custo financeiro calculado</span>
+                    </div>
+                    <div class="rep-summary-card">
+                        <span class="rep-card-label">Juros Poupados</span>
+                        <strong id="rep-total-saved" class="rep-card-value text-gold">+R$ 1.741,09</strong>
+                        <span class="rep-card-sub">Amortizações extraordinárias</span>
+                    </div>
+                </div>
+
+                <!-- Barra de Busca e Filtros do Relatório -->
+                <div class="reports-toolbar">
+                    <div class="search-input-wrap">
+                        <span class="material-symbols-rounded search-icon">search</span>
+                        <input type="text" id="report-search" placeholder="Filtrar relatório por número (#10), mês ou nota..." autocomplete="off">
+                    </div>
+                    <div class="filters-row">
+                        <button class="filter-chip rep-filter-chip active" data-rep-filter="ALL">Todas (<span id="rep-count-all">60</span>)</button>
+                        <button class="filter-chip rep-filter-chip" data-rep-filter="PAID">Quitadas (<span id="rep-count-paid">8</span>)</button>
+                        <button class="filter-chip rep-filter-chip" data-rep-filter="PENDING">Pendentes (<span id="rep-count-pending">52</span>)</button>
+                        <button class="filter-chip rep-filter-chip" data-rep-filter="ANTICIPATED">Amortizadas (<span id="rep-count-anticipated">3</span>)</button>
+                    </div>
+                </div>
+
                 <!-- Monthly Statements Table -->
                 <div class="table-container">
                     <table class="report-table">
                         <thead>
                             <tr>
-                                <th>Parcela</th>
-                                <th>Mês/Ano</th>
+                                <th># Parcela</th>
+                                <th>Vencimento</th>
                                 <th>Status</th>
-                                <th>Saldo Inicial</th>
-                                <th>Amortização</th>
-                                <th>Juros Mês</th>
-                                <th>Valor Pago</th>
-                                <th>Economia</th>
-                                <th>Saldo Final</th>
+                                <th class="text-right">Saldo Inicial</th>
+                                <th class="text-right">Amortização</th>
+                                <th class="text-right">Juros Mês</th>
+                                <th class="text-right">Prestação / Pago</th>
+                                <th class="text-right">Economia</th>
+                                <th class="text-right">Saldo Final</th>
                             </tr>
                         </thead>
                         <tbody id="report-tbody">
-                            <!-- Populated dynamically -->
+                            <tr>
+                                <td colspan="9" style="text-align: center; padding: 2.5rem;">
+                                    <div class="spinner" style="margin: 0 auto 0.75rem;"></div>
+                                    <span>Carregando demonstrativo analítico...</span>
+                                </td>
+                            </tr>
                         </tbody>
+                        <tfoot id="report-tfoot">
+                            <!-- Populated dynamically with sum totals -->
+                        </tfoot>
                     </table>
                 </div>
             </section>

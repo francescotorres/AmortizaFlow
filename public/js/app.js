@@ -9,9 +9,12 @@
     const state = {
         summary: null,
         installments: [],
+        reports: [],
         currentTab: 'dashboard',
         currentFilter: 'ALL',
+        reportFilter: 'ALL',
         searchQuery: '',
+        reportSearchQuery: '',
         simMode: 'REDUCE_TERM',
         simAmount: 1000,
         simResult: null,
@@ -325,10 +328,50 @@
     async function fetchReports() {
         try {
             const res = await fetch('/api/reports');
-            const reports = await res.json();
-            renderReportsTable(reports);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    state.reports = data;
+                }
+            }
+
+            // Fallback de contingência caso a rota remota falhe ou venha vazia
+            if (!state.reports || state.reports.length === 0) {
+                const insts = (state.installments && state.installments.length > 0)
+                    ? state.installments
+                    : getDefaultOfficialInstallments();
+
+                let currentBalance = 59122.80;
+                state.reports = insts.map(item => {
+                    const initialBal = currentBalance;
+                    const amortAmount = item.theoreticalAmortization > 0 ? item.theoreticalAmortization : 920.00;
+                    const interestVal = item.interestAmount !== undefined ? item.interestAmount : 65.38;
+                    const paymentAmount = item.isPaid ? (item.actualPaidAmount || item.nominalAmount) : item.nominalAmount;
+                    const interestPaid = item.isPaid ? (item.isAnticipated ? 0 : interestVal) : interestVal;
+                    currentBalance = Math.max(0, parseFloat((currentBalance - item.nominalAmount).toFixed(2)));
+
+                    return {
+                        parcelNumber: item.parcelNumber,
+                        monthYear: item.dueDate,
+                        initialBalance: initialBal,
+                        nominalAmount: item.nominalAmount,
+                        paymentAmount: paymentAmount,
+                        amortizationAmount: amortAmount,
+                        interestPaid: parseFloat(interestPaid.toFixed(2)),
+                        savedInterest: item.savedInterest || 0,
+                        finalBalance: currentBalance,
+                        isPaid: item.isPaid,
+                        isAnticipated: item.isAnticipated,
+                        paymentDate: item.paymentDate,
+                        notes: item.notes || ''
+                    };
+                });
+            }
+
+            renderReportsTable();
         } catch (err) {
-            console.error(err);
+            console.error('Erro ao buscar relatórios:', err);
+            renderReportsTable();
         }
     }
 
@@ -780,30 +823,120 @@
         }
     }
 
-    function renderReportsTable(reports) {
+    function renderReportsTable() {
         const tbody = document.getElementById('report-tbody');
+        const tfoot = document.getElementById('report-tfoot');
         if (!tbody) return;
+
+        const list = state.reports || [];
+        const paidItems = list.filter(r => r.isPaid);
+        const pendingItems = list.filter(r => !r.isPaid);
+        const anticipatedItems = list.filter(r => r.isAnticipated);
+
+        // Atualizar contadores nos chips de filtro de relatórios
+        const elRepAll = document.getElementById('rep-count-all');
+        const elRepPaid = document.getElementById('rep-count-paid');
+        const elRepPending = document.getElementById('rep-count-pending');
+        const elRepAnticipated = document.getElementById('rep-count-anticipated');
+
+        if (elRepAll) elRepAll.innerText = list.length;
+        if (elRepPaid) elRepPaid.innerText = paidItems.length;
+        if (elRepPending) elRepPending.innerText = pendingItems.length;
+        if (elRepAnticipated) elRepAnticipated.innerText = anticipatedItems.length;
+
+        // Atualizar cards de resumo analítico
+        const totalAmort = list.reduce((acc, r) => acc + (r.amortizationAmount || 0), 0);
+        const totalInterest = list.reduce((acc, r) => acc + (r.interestPaid || 0), 0);
+        const totalSaved = list.reduce((acc, r) => acc + (r.savedInterest || 0), 0);
+
+        const elTotAmort = document.getElementById('rep-total-amort');
+        const elTotInterest = document.getElementById('rep-total-interest');
+        const elTotSaved = document.getElementById('rep-total-saved');
+
+        if (elTotAmort) elTotAmort.innerText = formatBRL(totalAmort);
+        if (elTotInterest) elTotInterest.innerText = formatBRL(totalInterest);
+        if (elTotSaved) elTotSaved.innerText = `+${formatBRL(totalSaved)}`;
+
+        // Filtro por status
+        let filtered = list;
+        if (state.reportFilter === 'PAID') filtered = paidItems;
+        else if (state.reportFilter === 'PENDING') filtered = pendingItems;
+        else if (state.reportFilter === 'ANTICIPATED') filtered = anticipatedItems;
+
+        // Filtro por busca
+        if (state.reportSearchQuery && state.reportSearchQuery.trim() !== '') {
+            const q = state.reportSearchQuery.trim().toLowerCase().replace('#', '');
+            filtered = filtered.filter(r => {
+                const numStr = String(r.parcelNumber);
+                const dateStr = (r.monthYear || '').toLowerCase();
+                const notesStr = (r.notes || '').toLowerCase();
+                return numStr.includes(q) || dateStr.includes(q) || notesStr.includes(q);
+            });
+        }
+
         tbody.innerHTML = '';
 
-        reports.forEach(r => {
+        if (filtered.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                        <span class="material-symbols-rounded" style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">search_off</span>
+                        <strong>Nenhum registro encontrado no relatório</strong>
+                        <p style="font-size: 0.85rem; margin-top: 0.25rem;">Tente ajustar o termo de pesquisa ou os filtros acima.</p>
+                    </td>
+                </tr>
+            `;
+            if (tfoot) tfoot.innerHTML = '';
+            return;
+        }
+
+        filtered.forEach(r => {
             const tr = document.createElement('tr');
-            const statusBadge = r.isAnticipated
-                ? '<span class="badge blue">Amortizada</span>'
-                : (r.isPaid ? '<span class="badge green">Quitada</span>' : '<span class="badge">Pendente</span>');
+            const isAnticipated = r.isAnticipated;
+            const isPaid = r.isPaid;
+
+            const statusBadge = isAnticipated
+                ? '<span class="badge blue">Amortizada (Fim)</span>'
+                : (isPaid ? '<span class="badge green">Quitada</span>' : '<span class="badge">A Vencer</span>');
+
+            const paymentDisplay = isPaid
+                ? `<span class="${isAnticipated ? 'text-blue' : 'text-green'}" style="font-weight:700;">${formatBRL(r.paymentAmount)}</span>`
+                : `<span style="font-weight:600;">${formatBRL(r.paymentAmount)}</span>`;
 
             tr.innerHTML = `
                 <td><strong>#${r.parcelNumber}</strong></td>
                 <td>${r.monthYear}</td>
                 <td>${statusBadge}</td>
-                <td>${formatBRL(r.initialBalance)}</td>
-                <td style="color:var(--primary); font-weight:600;">${formatBRL(r.amortizationAmount)}</td>
-                <td>${formatBRL(r.interestPaid)}</td>
-                <td><strong>${formatBRL(r.paymentAmount)}</strong></td>
-                <td style="color:var(--gold); font-weight:700;">${r.savedInterest > 0 ? `+${formatBRL(r.savedInterest)}` : '-'}</td>
-                <td><strong>${formatBRL(r.finalBalance)}</strong></td>
+                <td class="text-right">${formatBRL(r.initialBalance)}</td>
+                <td class="text-right" style="color:var(--primary); font-weight:600;">${formatBRL(r.amortizationAmount)}</td>
+                <td class="text-right">${formatBRL(r.interestPaid)}</td>
+                <td class="text-right">${paymentDisplay}</td>
+                <td class="text-right" style="color:var(--gold); font-weight:700;">${r.savedInterest > 0 ? `+${formatBRL(r.savedInterest)}` : '-'}</td>
+                <td class="text-right"><strong>${formatBRL(r.finalBalance)}</strong></td>
             `;
             tbody.appendChild(tr);
         });
+
+        // Totais das parcelas filtradas para o rodapé da tabela
+        if (tfoot) {
+            const sumAmort = filtered.reduce((acc, r) => acc + (r.amortizationAmount || 0), 0);
+            const sumInterest = filtered.reduce((acc, r) => acc + (r.interestPaid || 0), 0);
+            const sumPayment = filtered.reduce((acc, r) => acc + (r.paymentAmount || 0), 0);
+            const sumSaved = filtered.reduce((acc, r) => acc + (r.savedInterest || 0), 0);
+            const lastBal = filtered.length > 0 ? filtered[filtered.length - 1].finalBalance : 0;
+
+            tfoot.innerHTML = `
+                <tr class="report-totals-row">
+                    <td colspan="3"><strong>TOTAIS (${filtered.length} parcelas exibidas)</strong></td>
+                    <td class="text-right">-</td>
+                    <td class="text-right text-primary"><strong>${formatBRL(sumAmort)}</strong></td>
+                    <td class="text-right"><strong>${formatBRL(sumInterest)}</strong></td>
+                    <td class="text-right"><strong>${formatBRL(sumPayment)}</strong></td>
+                    <td class="text-right text-gold"><strong>+${formatBRL(sumSaved)}</strong></td>
+                    <td class="text-right"><strong>${formatBRL(lastBal)}</strong></td>
+                </tr>
+            `;
+        }
     }
 
     function shareReport() {
@@ -881,6 +1014,25 @@
                 state.searchQuery = '';
                 clearSearchBtn.style.display = 'none';
                 renderInstallments();
+            });
+        }
+
+        // Report Filter Chips
+        document.querySelectorAll('.rep-filter-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('.rep-filter-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                state.reportFilter = chip.getAttribute('data-rep-filter');
+                renderReportsTable();
+            });
+        });
+
+        // Report Search Input
+        const reportSearchInput = document.getElementById('report-search');
+        if (reportSearchInput) {
+            reportSearchInput.addEventListener('input', (e) => {
+                state.reportSearchQuery = e.target.value;
+                renderReportsTable();
             });
         }
 
